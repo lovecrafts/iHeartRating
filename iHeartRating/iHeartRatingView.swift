@@ -136,6 +136,11 @@ open class HeartRatingView: UIView {
      */
     @IBInspectable open var shouldBounce: Bool = false
     
+    /**
+     Empty view should be hidden during bounce
+     */
+    @IBInspectable public var shouldHideEmptyViewDuringBounce: Bool = false
+    
     
     
     // MARK: Initializations
@@ -329,17 +334,24 @@ open class HeartRatingView: UIView {
             
             //Check if tapped image can bounce
             if shouldBounce {
-                let imageViewIndex = self.rating - 1 <= 0 ? 0 : self.rating - 1
-                self.fullImageViews[Int(imageViewIndex)].transform = CGAffineTransform(scaleX: 0.1, y: 0.1)
+                let imageViewIndex = Int(self.rating - 1 <= 0 ? 0 : self.rating - 1)
+                self.fullImageViews[imageViewIndex].transform = CGAffineTransformMakeScale(0.1, 0.1)
                 
-                UIView.animate(withDuration: 2.0,
+                let originalEmptyViewHiddenFlagValue = self.emptyImageViews[imageViewIndex].hidden
+                if shouldHideEmptyViewDuringBounce {
+                    self.emptyImageViews[imageViewIndex].hidden = true
+                }
+                
+                UIView.animateWithDuration(2.0,
                     delay: 0,
                     usingSpringWithDamping: 0.2,
                     initialSpringVelocity: 9.0,
                     options: UIViewAnimationOptions.allowUserInteraction,
                     animations: {
-                        self.fullImageViews[Int(imageViewIndex)].transform = CGAffineTransform.identity
-                    }, completion: nil)
+                        self.fullImageViews[imageViewIndex].transform = CGAffineTransformIdentity
+                }) { _ in
+                    self.emptyImageViews[imageViewIndex].hidden = originalEmptyViewHiddenFlagValue
+                }
             }
         }
     }
