@@ -136,6 +136,11 @@ open class HeartRatingView: UIView {
      */
     @IBInspectable open var shouldBounce: Bool = false
     
+    /**
+     Empty view should be hidden during bounce
+     */
+    @IBInspectable public var shouldHideEmptyViewDuringBounce: Bool = false
+    
     
     
     // MARK: Initializations
@@ -177,6 +182,16 @@ open class HeartRatingView: UIView {
             else {
                 imageView.layer.mask = nil;
                 imageView.isHidden = true
+            }
+        }
+        
+        //also reset empty image views (as they may be hidden during a bounce animation)
+        for i in 0..<self.emptyImageViews.count {
+            
+            //only reset empty views above the current rating (the current value will be hidden when bounce animation finishes)
+            let indexAsFloat = Float(i + 1)
+            if self.rating < indexAsFloat {
+                self.emptyImageViews[i].isHidden = false
             }
         }
     }
@@ -321,6 +336,9 @@ open class HeartRatingView: UIView {
         }
     }
     
+    //track animations in progress to make sure the final animation is the one to restore the empty image view's state
+    private var animationsInProgressCountForIndex: [Int: Int] = [:]
+    
     override open func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         // Update delegate
         if let delegate = self.delegate {
@@ -329,17 +347,37 @@ open class HeartRatingView: UIView {
             
             //Check if tapped image can bounce
             if shouldBounce {
-                let imageViewIndex = self.rating - 1 <= 0 ? 0 : self.rating - 1
-                self.fullImageViews[Int(imageViewIndex)].transform = CGAffineTransform(scaleX: 0.1, y: 0.1)
+                let imageViewIndex = Int(self.rating - 1 <= 0 ? 0 : self.rating - 1)
+                self.fullImageViews[imageViewIndex].transform = CGAffineTransform(scaleX: 0.1, y: 0.1)
+                
+                if shouldHideEmptyViewDuringBounce {
+                    //hide the appropriate empty image view
+                    self.emptyImageViews[imageViewIndex].isHidden = true
+                    
+                    //update animation in progress tracking (used to control when to restore the empty view)
+                    let currentCount = animationsInProgressCountForIndex[imageViewIndex] ?? 0
+                    animationsInProgressCountForIndex[imageViewIndex] = currentCount + 1
+                }
                 
                 UIView.animate(withDuration: 2.0,
                     delay: 0,
                     usingSpringWithDamping: 0.2,
                     initialSpringVelocity: 9.0,
-                    options: UIViewAnimationOptions.allowUserInteraction,
+                    options: [.allowUserInteraction, .beginFromCurrentState],
                     animations: {
-                        self.fullImageViews[Int(imageViewIndex)].transform = CGAffineTransform.identity
-                    }, completion: nil)
+                        self.fullImageViews[imageViewIndex].transform = .identity
+                }) { _ in
+                    
+                    //decrement the current count if we were tracking for this animation
+                    if let currentCount = self.animationsInProgressCountForIndex[imageViewIndex] {
+                        self.animationsInProgressCountForIndex[imageViewIndex] = currentCount - 1
+                    }
+                    
+                    //if there are no more animations in progress, restore the empty view
+                    if self.animationsInProgressCountForIndex[imageViewIndex] == 0 {
+                        self.emptyImageViews[imageViewIndex].isHidden = false
+                    }
+                }
             }
         }
     }
