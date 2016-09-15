@@ -191,7 +191,7 @@ open class HeartRatingView: UIView {
             //only reset empty views above the current rating (the current value will be hidden when bounce animation finishes)
             let indexAsFloat = Float(i + 1)
             if self.rating < indexAsFloat {
-                self.emptyImageViews[i].hidden = false
+                self.emptyImageViews[i].isHidden = false
             }
         }
     }
@@ -339,7 +339,7 @@ open class HeartRatingView: UIView {
     //track animations in progress to make sure the final animation is the one to restore the empty image view's state
     private var animationsInProgressCountForIndex: [Int: Int] = [:]
     
-    override public func touchesEnded(touches: Set<UITouch>, withEvent event: UIEvent?) {
+    override open func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         // Update delegate
         if let delegate = self.delegate {
             
@@ -348,24 +348,24 @@ open class HeartRatingView: UIView {
             //Check if tapped image can bounce
             if shouldBounce {
                 let imageViewIndex = Int(self.rating - 1 <= 0 ? 0 : self.rating - 1)
-                self.fullImageViews[imageViewIndex].transform = CGAffineTransformMakeScale(0.1, 0.1)
+                self.fullImageViews[imageViewIndex].transform = CGAffineTransform(scaleX: 0.1, y: 0.1)
                 
                 if shouldHideEmptyViewDuringBounce {
                     //hide the appropriate empty image view
-                    self.emptyImageViews[imageViewIndex].hidden = true
+                    self.emptyImageViews[imageViewIndex].isHidden = true
                     
                     //update animation in progress tracking (used to control when to restore the empty view)
                     let currentCount = animationsInProgressCountForIndex[imageViewIndex] ?? 0
                     animationsInProgressCountForIndex[imageViewIndex] = currentCount + 1
                 }
                 
-                UIView.animateWithDuration(2.0,
+                UIView.animate(withDuration: 2.0,
                     delay: 0,
                     usingSpringWithDamping: 0.2,
                     initialSpringVelocity: 9.0,
-                    options: [.AllowUserInteraction, .BeginFromCurrentState],
+                    options: [.allowUserInteraction, .beginFromCurrentState],
                     animations: {
-                        self.fullImageViews[imageViewIndex].transform = CGAffineTransformIdentity
+                        self.fullImageViews[imageViewIndex].transform = .identity
                 }) { _ in
                     
                     //decrement the current count if we were tracking for this animation
@@ -375,7 +375,7 @@ open class HeartRatingView: UIView {
                     
                     //if there are no more animations in progress, restore the empty view
                     if self.animationsInProgressCountForIndex[imageViewIndex] == 0 {
-                        self.emptyImageViews[imageViewIndex].hidden = false
+                        self.emptyImageViews[imageViewIndex].isHidden = false
                     }
                 }
             }
